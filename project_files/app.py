@@ -19,10 +19,10 @@ app = Flask(__name__)
 # Database Setup
 #################################################
 db_endpoint=os.environ.get
-print(db_endpoint)
+# print(db_endpoint)
 app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get('DATABASE_URL', '') or "sqlite:///data/taxi.sqlite"
 db = SQLAlchemy(app)
-engine = create_engine(os.environ.get('DATABASE_URL','') or "sqlite:///data/taxi.sqlite")
+# engine = create_engine(os.environ.get('DATABASE_URL','') or "sqlite:///data/taxi.sqlite")
 
 class Metadata(db.Model):
     __tablename__ = "taxi_data"
@@ -75,4 +75,4 @@ def taxidata():
     return jsonify(all_rides)
 
 if __name__ == "__main__":
-    app.run()
+    app.run(port=9999)
