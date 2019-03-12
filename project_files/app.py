@@ -45,18 +45,18 @@ def index():
 def taxidata():
     """Return a list of taxi data"""
 
-    sel = [
-        Metadata.TRIP_ID,
-        Metadata.TRIP_START_TIMESTAMP,
-        Metadata.TRIP_END_TIMESTAMP,
-        Metadata.PICKUP_LATITUDE,
-        Metadata.PICKUP_LONGITUDE,
-        Metadata.DROPOFF_LATITUDE,
-        Metadata.DROPOFF_LONGITUDE,
-        Metadata.FARE
-    ]
+    # sel = [
+    #     Metadata.TRIP_ID,
+    #     Metadata.TRIP_START_TIMESTAMP,
+    #     Metadata.TRIP_END_TIMESTAMP,
+    #     Metadata.PICKUP_LATITUDE,
+    #     Metadata.PICKUP_LONGITUDE,
+    #     Metadata.DROPOFF_LATITUDE,
+    #     Metadata.DROPOFF_LONGITUDE,
+    #     Metadata.FARE
+    # ]
 
-    results = db.session.query(*sel).all()
+    results = db.session.query(Metadata.TRIP_ID, Metadata.TRIP_START_TIMESTAMP, Metadata.TRIP_END_TIMESTAMP, Metadata.PICKUP_LATITUDE, Metadata.PICKUP_LONGITUDE, Metadata.DROPOFF_LATITUDE, Metadata.DROPOFF_LONGITUDE, Metadata.FARE).all()
 
     # Create a dictionary entry for each row of metadata information
     all_rides = []
