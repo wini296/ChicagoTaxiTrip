@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import create_engine
 from sqlalchemy import inspect
 
-from flask import Flask, jsonify, render_template
+from flask import Flask, jsonify, render_template, request
 from flask_sqlalchemy import SQLAlchemy
 
 # Flask setup
@@ -20,20 +20,20 @@ app = Flask(__name__)
 #################################################
 db_endpoint=os.environ.get('DATABASE_URL', '')
 print(db_endpoint)
-app.config["SQLALCHEMY_DATABASE_URI"] = db_endpoint # os.environ.get('DATABASE_URL', '') or "sqlite:///data/taxi.sqlite"
+app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get('DATABASE_URL', '') or "sqlite:///data/taxi.sqlite"
 db = SQLAlchemy(app)
 # engine = create_engine(os.environ.get('DATABASE_URL','') or "sqlite:///data/taxi.sqlite")
 
 class Metadata(db.Model):
     __tablename__ = "taxi_data"
-    trip_id = db.column(db.integer, primary_key=true)
-    trip_start_timestamp = db.column(db.string)
-    trip_end_timestamp = db.column(db.string)
-    pickup_latitude = db.column(db.float)
-    pickup_longitude = db.column(db.float)
-    dropoff_latitude = db.column(db.float)
-    dropoff_longitude = db.column(db.float)
-    fare = db.column(db.float)
+    TRIP_ID = db.Column(db.Integer, primary_key=True)
+    TRIP_START_TIMESTAMP = db.Column(db.String)
+    TRIP_END_TIMESTAMP = db.Column(db.String)
+    PICKUP_LATITUDE = db.Column(db.Float)
+    PICKUP_LONGITUDE = db.Column(db.Float)
+    DROPOFF_LATITUDE = db.Column(db.Float)
+    DROPOFF_LONGITUDE = db.Column(db.Float)
+    FARE = db.Column(db.Float)
 
 @app.route("/")
 def index():
@@ -46,14 +46,14 @@ def taxidata():
     """Return a list of taxi data"""
 
     sel = [
-        metadata.trip_id,
-        metadata.trip_start_timestamp,
-        metadata.trip_end_timestamp,
-        metadata.pickup_latitude,
-        metadata.pickup_longitude,
-        metadata.dropoff_latitude,
-        metadata.dropoff_longitude,
-        metadata.fare
+        Metadata.TRIP_ID,
+        Metadata.TRIP_START_TIMESTAMP,
+        Metadata.TRIP_END_TIMESTAMP,
+        Metadata.PICKUP_LATITUDE,
+        Metadata.PICKUP_LONGITUDE,
+        Metadata.DROPOFF_LATITUDE,
+        Metadata.DROPOFF_LONGITUDE,
+        Metadata.FARE
     ]
 
     results = db.session.query(*sel).all()
@@ -62,14 +62,14 @@ def taxidata():
     all_rides = []
     for result in results:
         taxi_dict = {}
-	    taxi_dict["trip_id"] = result.trip_id
-        taxi_dict["trip_start"] = result.trip_start_timestamp
-        taxi_dict["trip_end"] = result.trip_end_timestamp
-        taxi_dict["pickup_lat"] = result.pickup_latitude
-        taxi_dict["pickup_lng"] = result.pickup_longitude
-        taxi_dict["dropoff_lat"] = result.dropoff_latitude
-        taxi_dict["dropoff_lng"] = result.dropoff_longitude
-        taxi_dict["fare"] = result.fare
+        taxi_dict["trip_id"] = result.TRIP_ID
+        taxi_dict["trip_start"] = result.TRIP_START_TIMESTAMP
+        taxi_dict["trip_end"] = result.TRIP_END_TIMESTAMP
+        taxi_dict["pickup_lat"] = result.PICKUP_LATITUDE
+        taxi_dict["pickup_lng"] = result.PICKUP_LONGITUDE
+        taxi_dict["dropoff_lat"] = result.DROPOFF_LATITUDE
+        taxi_dict["dropoff_lng"] = result.DROPOFF_LONGITUDE
+        taxi_dict["fare"] = result.FARE
         all_rides.append(taxi_dict)
 
     return jsonify(all_rides)
