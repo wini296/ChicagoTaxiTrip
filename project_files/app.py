@@ -18,9 +18,9 @@ app = Flask(__name__)
 #################################################
 # Database Setup
 #################################################
-db_endpoint=os.environ.get
-# print(db_endpoint)
-app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get('DATABASE_URL', '') or "sqlite:///data/taxi.sqlite"
+db_endpoint= os.environ.get('DATABASE_URL', '')
+print(db_endpoint)
+app.config["SQLALCHEMY_DATABASE_URI"] = db_endpoint # os.environ.get('DATABASE_URL', '') or "sqlite:///data/taxi.sqlite"
 db = SQLAlchemy(app)
 # engine = create_engine(os.environ.get('DATABASE_URL','') or "sqlite:///data/taxi.sqlite")
 
