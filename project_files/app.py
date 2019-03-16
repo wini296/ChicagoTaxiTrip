@@ -19,14 +19,12 @@ app = Flask(__name__)
 # Database Setup
 #################################################
 db_endpoint=os.environ.get('DATABASE_URL', '')
-print(db_endpoint)
 app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get('DATABASE_URL', '') or "sqlite:///data/taxi.sqlite"
 db = SQLAlchemy(app)
-# engine = create_engine(os.environ.get('DATABASE_URL','') or "sqlite:///data/taxi.sqlite")
 
 class Metadata(db.Model):
     __tablename__ = "taxi_data"
-    trip_id = db.Column(db.Integer, primary_key=True)
+    trip_id = db.Column(db.String, primary_key=True)
     trip_start_timestamp = db.Column(db.String)
     trip_end_timestamp = db.Column(db.String)
     fare = db.Column(db.Float)
@@ -35,45 +33,74 @@ class Metadata(db.Model):
     dropoff_latitude = db.Column(db.Float)
     dropoff_longitude = db.Column(db.Float)
 
+#################################################
+# Routes
+#################################################
 
 @app.route("/")
 def index():
     """Return the homepage."""
     return render_template("index.html")
 
-
-@app.route("/api/taxidata")
-def taxidata():
-    """Return a list of taxi data"""
-
+@app.route("/api/pickupdata")
+def pickupdata():
     sel = [
         Metadata.trip_id,
         Metadata.trip_start_timestamp,
-        Metadata.trip_end_timestamp,
-        Metadata.fare,
         Metadata.pickup_latitude,
         Metadata.pickup_longitude,
-        Metadata.dropoff_latitude,
-        Metadata.dropoff_longitude
+        Metadata.fare
     ]
-
     results = db.session.query(*sel).all()
-
-    # Create a dictionary entry for each row of metadata information
-    all_rides = []
+    all_pickups = []
     for result in results:
-        taxi_dict = {}
-        taxi_dict["trip_id"] = result.trip_id
-        taxi_dict["trip_start"] = result.trip_start_timestamp
-        taxi_dict["trip_end"] = result.trip_end_timestamp
-        taxi_dict["pickup_lat"] = result.pickup_latitude
-        taxi_dict["pickup_lng"] = result.pickup_longitude
-        taxi_dict["dropoff_lat"] = result.dropoff_latitude
-        taxi_dict["dropoff_lng"] = result.dropoff_longitude
-        taxi_dict["fare"] = result.fare
-        all_rides.append(taxi_dict)
+        pickup_dict = {
+            "type": "Feature",
+            "geometry": {
+                "type": "Point",
+                "coordinates": [
+                    result.pickup_latitude,
+                    result.pickup_longitude,
+                ]
+            },  
+            "properties": {
+                "trip_id": result.trip_id,
+                "trip_start": result.trip_start_timestamp,
+                "fare": result.fare
+            }
+        }
+        all_pickups.append(pickup_dict)
+    return jsonify(all_pickups)
 
-    return jsonify(all_rides)
+@app.route("/api/dropoffdata")
+def dropoffdata():
+    sel = [
+        Metadata.trip_id,
+        Metadata.trip_end_timestamp,
+        Metadata.dropoff_latitude,
+        Metadata.dropoff_longitude,
+        Metadata.fare
+    ]
+    results = db.session.query(*sel).all()
+    all_dropoffs = []
+    for result in results:
+        dropoff_dict = {
+            "type": "Feature", 
+            "geometry": {
+                "type": "Point",
+                "coordinates": [
+                    result.dropoff_latitude,
+                    result.dropoff_longitude
+                ]
+            },
+            "properties": {
+                "trip_id": result.trip_id,
+                "trip_start": result.trip_end_timestamp,
+                "fare": result.fare
+            }
+        }
+        all_dropoffs.append(dropoff_dict)
+    return jsonify(all_dropoffs)    
 
 if __name__ == "__main__":
     app.run()
