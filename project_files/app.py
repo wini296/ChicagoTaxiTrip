@@ -103,4 +103,4 @@ def dropoffdata():
     return jsonify(all_dropoffs)    
 
 if __name__ == "__main__":
-    app.run(port=9999)
+    app.run()
