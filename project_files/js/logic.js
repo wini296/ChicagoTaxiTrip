@@ -12,147 +12,198 @@ var lightmap = L.tileLayer("https://api.mapbox.com/styles/v1/mapbox/light-v9/til
     accessToken: API_KEY
 });
 
-// Layer initialization
-var layers = {
-    BEFORE: new L.LayerGroup(),
-    TRANSIT: new L.LayerGroup(),
-    AFTER: new L.LayerGroup(),
+var taxiIcon = L.icon({
+    iconUrl: '../images/taxi_icon.png',
+
+    iconSize:     [60, 60], // size of the icon
+    iconAnchor:   [22, 94], // point of the icon which will correspond to marker's location
+    popupAnchor:  [-3, -76] // point from which the popup should open relative to the iconAnchor
+});
+
+// Ugly, but binning like this allows for faster update after slider input (though initial render is still slow)
+var layersArr = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R'];
+
+var layers = {};
+var overlays = {};
+var layerCount = {};
+
+// Why were we not doing it this way in class...
+for (var i=0; i<layersArr.length; i++) {
+    layers[layersArr[i]] = new L.LayerGroup();
+    overlays[layersArr[i]] = layers[layersArr[i]];
+    layerCount[layersArr[i]] = 0;
 };
 
 // Create map
 var map = L.map("map-id", {
     center: [41.86, -87.67], 
     zoom: 12, 
-    layers: [
-        layers.BEFORE,
-        layers.TRANSIT,
-        layers.AFTER,
-    ]
+    layers: []
 });
 
 // Add lightmap tile layer to map
 lightmap.addTo(map);
 
-// Overlays object
-var overlays = {
-    "Before departure": layers.BEFORE,
-    "In transit": layers.TRANSIT,
-    "After arrival": layers.AFTER
-};
-
 // Control for layers 
-L.control.layers(null, overlays).addTo(map);
+// L.control.layers(null, overlays).addTo(map);
 
-// Create a legend 
-var info = L.control({
-    position: "bottomright"
-});
-
-// Add div class legend on layer control addition
-info.onAdd = function() {
-    var div = L.DomUtil.create("div", "legend");
-    return div;
-};
-
-info.addTo(map);
+// // Create a legend 
+// var info = L.control({
+//     position: "bottomright"
+// });
+// // Add div class legend on layer control addition
+// info.onAdd = function() {
+//     var div = L.DomUtil.create("div", "legend");
+//     return div;
+// };
+// info.addTo(map);
 
 
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ //
-//   Use D3 to get the json data   //
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ //
 
-// Example entry:
-// {
-//     "geometry":{
-//         "coordinates":[41.90120699,-87.67635599],
-//         "type":"Point"
-//     },
-//     "properties":{
-//         "fare":6.25,
-//         "trip_id":"02847db485a2d331ad991e73aadd1e7930ebde97",
-//         "trip_start":"12/31/2016 1:30"
-//     },
-//     "type":"Feature"
-// },
+// // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ //
+// //   Use D3 to get the json data   //
+// // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ //
 
-var parser = d3.timeParse
+// // Example entry from pickupdata:
+// // {
+// //     "geometry":{
+// //         "coordinates":[41.90120699,-87.67635599],
+// //         "type":"Point"
+// //     },
+// //     "properties":{
+// //         "fare":6.25,
+// //         "trip_id":"02847db485a2d331ad991e73aadd1e7930ebde97",
+// //         "trip_start":"12/31/2016 1:30"
+// //     },
+// //     "type":"Feature"
+// // },
 
-d3.json('http://chicago-cabs.herokuapp.com/api/dropoffdata', function(dropoffData) {
-    d3.json('http://chicago-cabs.herokuapp.com/api/pickupdata', function(pickupData) {
+// d3.json('https://chicago-cabs.herokuapp.com/api/dropoffdata', function(dropoffData) {
+    d3.json('https://chicago-cabs.herokuapp.com/api/pickupdata', function(pickupData) {
 
         var pickupTime = [];
-        var dropoffTime = [];
+        // var dropoffTime = [];
         var pickupLat = [];
         var pickupLon = [];
-        var dropoffLat = [];
-        var dropoffLon = [];
-        var fare = [];
-        var tripID = [];
+        // var dropoffLat = [];
+        // var dropoffLon = [];
+        // var fare = [];
+        // var tripID = [];
+
+        // note: 
+        // 1483164000000 = 00:00:00 on 12/31/16
+        // 1483228800000 = 18:00:00 on 12/31/16
+        // 1483250399000 = 23:59:59 on 12/31/16
+
+        var timeRangeStart = 1483228800000 - 900000;
+        var timeRangeEnd = 1483250399000 + 900000;
+        var timeRange = timeRangeEnd - timeRangeStart;
+
+        var currentTime = "18:00";
+
+        d3.select('#current-time')
+            .append('h2')
+            .attr('id', 'current-time-header')
+            .append('text')
+            .text(`Selected Time: ${currentTime}`);
 
         for (var i = 0; i < pickupData.length; i++) {
-            pickupTime.push(Date.now(new Date(pickupData[i].properties.trip_start)));
-            dropoffTime.push(Date.now(new Date(dropoffData[i].properties.trip_end)));
-            pickupLat.push(pickupData[i].geometry.coordinates[0]);
-            pickupLon.push(pickupData[i].geometry.coordinates[1]);
-            dropoffLat.push(dropoffData[i].geometry.coordinates[0]);
-            dropoffLon.push(dropoffData[i].geometry.coordinates[1]);
-            fare.push(pickupData[i].properties.fare);
-            tripID.push(pickupData[i].properties.trip_id);        
+
+            var p = new Date(pickupData[i].properties.trip_start).getTime();
+
+            if (p>timeRangeStart && p<timeRangeEnd) {
+                pickupTime.push(p);
+                // dropoffTime.push(new Date(dropoffData[i].properties.trip_end).getTime());
+                pickupLat.push(pickupData[i].geometry.coordinates[0]);
+                pickupLon.push(pickupData[i].geometry.coordinates[1]);
+                // dropoffLat.push(dropoffData[i].geometry.coordinates[0]);
+                // dropoffLon.push(dropoffData[i].geometry.coordinates[1]);
+                // fare.push(pickupData[i].properties.fare);
+                // tripID.push(pickupData[i].properties.trip_id); 
+            };       
         };
 
-        var minTime = Math.min.apply(null, pickupTime);
-        var maxTime = Math.max.apply(null, dropoffTime);
+        // if we get load time up, set maxMarkers = pickupTime.length
+        var maxMarkers = pickupTime.length;
+        console.log(maxMarkers);
 
-        var timeSel = minTime;
-        
-        console.log(`selected time: ${timeSel}`);
-        // console.log(`pickup time: ${pickupTime[1]}`);
+        // Useful for testing with timestamps etc
+        // var minTime = Math.min.apply(null, pickupTime);
+        // var maxTime = Math.max.apply(null, pickupTime);
+        // var timeSel = minTime;
 
-        var locationCount = {
-            BEFORE: 0,
-            TRANSIT: 0,
-            AFTER: 0,
-        };
+        var currentLayer = layersArr[0];
+        console.log(`current layer: ${currentLayer}`);
 
         var tripStatus;
 
-        // for (var i = 0; i < pickupTime.length; i++) {
-        for (var i = 0; i < 200; i++) {
 
-            var trip = Object.assign({}, pickupData[i], dropoffData[i]);
+        // sketchy binning
+        var temp = []
+        for (var i=0; i<maxMarkers; i++) {
+            var u = Math.round(((layersArr.length+1)*(pickupTime[i] - timeRangeStart)) / timeRange);
+            temp.push(u);
 
-            if (timeSel < pickupTime[i]) {
-                tripStatus = "BEFORE";
-                var newMarker = L.marker([pickupLat[i], pickupLon[i]]);
-                newMarker.addTo(layers[tripStatus]);
-            }
-            else if (timeSel > dropoffTime[i]) {
-                tripStatus = "AFTER";
-                var newMarker = L.marker([dropoffLat[i], dropoffLon[i]]);
-                newMarker.addTo(layers[tripStatus]);
-            }
-            else {
-                tripStatus = "TRANSIT";
-            }
+            tripStatus = layersArr[u-1];
+            var newMarker = L.marker([pickupLat[i], pickupLon[i]], {icon: taxiIcon});
 
-            locationCount[tripStatus]++;
+            var pTime = new Date(pickupTime[i]);
+            newMarker.bindPopup('Pickup Time: ' + pTime.getHours() + ':' + pTime.getMinutes() );
+            
+            newMarker.addTo(layers[tripStatus]);
+            layerCount[tripStatus]++;
+        };
+
+        map.addLayer(layers["A"]);
+
+
+        // // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ //
+        // //   Use D3/slider to update map   //
+        // // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ //
+
+        var submit = d3.select("#myRange");
+
+        submit.on("change", function() {
+            
+            d3.event.preventDefault();
+
+            map.removeLayer(layers[currentLayer]);
+
+            var input = submit.property("value");
+            var newBin = Math.round(((layersArr.length-1)*input) / 100 );
+
+            currentLayer = layersArr[newBin];
+
+            map.addLayer(layers[currentLayer]);
+            console.log(currentLayer);
+
+            var currentTime = dataTime[newBin];
+
+            d3.select('#current-time-header').remove('h2');
+                
+            d3.select('#current-time')
+                .append('h2')
+                .attr('id', 'current-time-header')
+                .append('text')
+                .text(`Selected Time: ${currentTime}`);
 
             
-            // newMarker.addTo(layers[tripStatus]);
-
-            // newMarker.bindPopup()
-        }        
-        console.log(locationCount);
+        });
 
     });
-});
+// });
 
+var dataTime = d3.range(0, layersArr.length+1).map(function(d) {
+    var x = d3.timeFormat('%H:%M');
+    return x(new Date(2015, 12, 31, 18, d*20));
+  });
 
-var submit = d3.select("#myRange");
+var tickNum = 18;
 
-submit.on("click", function() {
-    
-    d3.event.preventDefault();
+for (var i=0; i<tickNum; i = i + 3) {
+    d3.select('#timeline').append('text')
+        .text(dataTime[i] + "-------------");  
+};
 
-    
-})
+d3.select('#timeline').append('text')
+    .text(dataTime[tickNum]);
